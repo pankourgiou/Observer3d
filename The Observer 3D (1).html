@@ -1,0 +1,207 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>The Observer 3D</title>
+<style>
+:root{--bg:#010805;--g:#2dff7a;--c:#35e0ff;--m:#ff3df2;--w:#ffb02e;--tx:#b8ffd0;--ln:#0e4a26;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:13px/1.4 ui-monospace,Menlo,Consolas,monospace}
+#app{max-width:1100px;margin:auto;padding:8px}h1{font-size:15px;margin:0;color:var(--g);letter-spacing:.06em}
+#top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:6px}
+#hud{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:4px;margin-bottom:6px}
+.st{border:1px solid var(--ln);padding:3px 5px;position:relative;overflow:hidden}.st small{opacity:.6;font-size:10px}.st b{display:block;font-size:12px;position:relative}.st i{position:absolute;left:0;bottom:0;height:3px;background:var(--g);width:0}
+#stage{position:relative;height:58vh;min-height:300px;border:1px solid var(--g);overflow:hidden;background:#000}
+#gl,#gl canvas{width:100%;height:100%;display:block;touch-action:none}#gl{cursor:crosshair}
+#mx{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;opacity:.6}
+#fl{position:absolute;inset:0;pointer-events:none;background:#ff3df2;opacity:0}
+.lb{position:absolute;color:var(--w);font-size:11px;pointer-events:none;display:none;white-space:nowrap;text-shadow:0 0 4px #000}
+#bub{position:absolute;left:8px;right:80px;top:8px;background:rgba(30,0,40,.85);border:1px solid var(--m);color:#ffd0fb;padding:5px 8px;display:none}
+.pip{position:absolute;right:8px;width:170px;height:110px;border:1px solid var(--c);display:none;pointer-events:none}.pip small{position:absolute;left:3px;top:1px;color:var(--c);font-size:10px}.pip.on{display:block}
+#pa{bottom:8px}#pb{bottom:124px}
+#micro{position:absolute;left:8px;bottom:8px;border:1px solid var(--ln);display:none;background:#010}#micro.on{display:block}
+#modeTag{position:absolute;left:8px;top:8px;color:var(--w);pointer-events:none}
+#log{height:92px;overflow:auto;border:1px solid var(--ln);padding:4px 6px;margin:6px 0;font-size:12px}#log p{margin:0 0 2px}.a{color:var(--w)}.m{color:var(--m)}.c{color:var(--c)}
+.grp{margin:4px 0;display:flex;flex-wrap:wrap;gap:4px;align-items:center}.grp span{width:96px;opacity:.55;font-size:11px}
+button{background:#031a0c;color:var(--g);border:1px solid var(--g);padding:7px 9px;font:inherit;cursor:pointer;min-height:34px}button:hover{background:#06361a}button.on{background:var(--g);color:#001a08}button:disabled{opacity:.3;cursor:default}
+button:focus-visible,input:focus-visible{outline:2px solid var(--w);outline-offset:1px}
+.lv{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0}.lv label{display:flex;flex-direction:column;font-size:11px;min-width:140px;gap:2px}input[type=range]{accent-color:var(--g);width:100%}
+#over{position:fixed;inset:0;background:rgba(0,10,4,.93);display:none;align-items:center;justify-content:center;text-align:center;padding:20px;z-index:9}#over.on{display:flex}#over div{max-width:520px}
+.full #tools .act{opacity:.3;pointer-events:none}
+#tl{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;align-items:center;gap:4px;background:rgba(0,0,0,.65);border:1px solid var(--ln);padding:5px 7px;pointer-events:none}#tl i{width:15px;height:15px;border-radius:50%;opacity:.18;display:block}#tl b{font-size:10px}#tr{background:#ff3b3b}#to{background:#ffb02e}#tg{background:#2dff7a}#tr.on{opacity:1;box-shadow:0 0 12px #ff3b3b}#to.on{opacity:1;box-shadow:0 0 12px #ffb02e}#tg.on{opacity:1;box-shadow:0 0 12px #2dff7a}
+</style></head><body><div id="app">
+<div id="top"><h1>THE OBSERVER 3D</h1><div class="grp"><button id="mSemi" class="on">Semi-auto: you choose, autopilot walks</button><button id="mFull">Full auto: it plays itself</button><button id="clk">Clock ×1</button></div></div>
+<div id="hud"></div>
+<div id="stage"><div id="gl"></div><canvas id="mx"></canvas><div id="fl"></div><div id="labels"></div><div id="modeTag"></div><div id="tl"><i id="tr"></i><i id="to"></i><i id="tg"></i><b id="tb">72 bpm</b></div><div id="bub"></div>
+<div class="pip" id="pa"><small>CAM A · camp</small></div><div class="pip" id="pb"><small>CAM B · drone/relay</small></div><canvas id="micro" width="200" height="150"></canvas></div>
+<div id="log"></div>
+<div class="lv"><label>Lever · tide <input id="l1" type="range" min="-4" max="4" step="1" value="0"></label><label>Lever · wind <input id="l2" type="range" min="-3" max="3" step="1" value="0"></label><label>Lever · scanner gain (louder too) <input id="l3" type="range" min="10" max="100" value="50"></label></div>
+<div id="tools"></div><small>Drag the 3D view to rotate. In semi-auto, click the ground to send the autopilot there.</small></div>
+<div id="over"><div id="ovt"></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=i=>document.getElementById(i),stage=$('stage');
+const G=64,C=3,V=1.5,MH=14,seed=Math.random()*9999|0;
+const hash=n=>{const x=Math.sin(n*127.1+seed*311.7)*43758.5453;return x-Math.floor(x)};
+const ERAS={2300:{col:0x2dff7a,cs:'#2dff7a',dmg:55,amp:1,ph:1.3,type:'tent'},2450:{col:0x35e0ff,cs:'#35e0ff',dmg:70,amp:1.3,ph:4.1,type:'dome'},2600:{col:0xff3df2,cs:'#ff3df2',dmg:85,amp:.75,ph:2.2,type:'spire'}};
+const MINDS={2300:["The sky is thinning. Command says wait.","We counted three moons. There are two.","Someone watches the camp from behind my eyes.","The sea left our shore. We follow it."],2450:["The domes hum at night. We stopped sleeping.","A tall one walked on water. Nobody spoke of it.","Our maps change while we eat.","Rain tastes of metal now."],2600:["The ring above us is nearly closed. Who builds it?","Tomorrow’s rain fell on us yesterday.","They said the observer was a myth.","Nothing left to harvest, only to remember."]};
+const BLEED=["I remember a year that has not happened.","My hands are from another century."];
+const S={bpm:72,breath:0,anch:[],mag:null,back:null,go:null,at:null,left:18000,ts:1,era:2300,prev:2300,bleed:0,dmg:55,psi:100,dys:60,alert:0,veil:0,w:'clear',score:0,sphere:0,tide:0,gain:50,mode:null,tkDir:1,drone:false,over:false,seen:0,minds:0,jumps:0,flash:0,scanCd:0,auto:'semi',bt:2,az:.6,el:.5,tel:false,wind:0};
+const SEA=()=>5+S.tide,ci=v=>Math.max(0,Math.min(G-1,Math.floor(v/C))),gh=(x,z)=>Math.max(HT[ci(z)*G+ci(x)],SEA())*V;
+let HT=new Int8Array(G*G),SRC=new Uint16Array(G*G),ED=new Int8Array(G*G),camps=[],aliens=[],t=0,tL,tS;
+const GREY=new THREE.Color(0x778078);
+// renderer
+let SW=stage.clientWidth,SH=stage.clientHeight;
+const ren=new THREE.WebGLRenderer({antialias:true});ren.setPixelRatio(Math.min(devicePixelRatio,2));ren.setSize(SW,SH);ren.autoClear=false;$('gl').appendChild(ren.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x010805);scene.fog=new THREE.FogExp2(0x010805,.008);
+const cam=new THREE.PerspectiveCamera(60,SW/SH,.5,2500),camA=new THREE.PerspectiveCamera(60,1.55,.5,2500),camB=new THREE.PerspectiveCamera(70,1.55,.5,2500);
+function eh(e,x,z){const E=ERAS[e],p=E.ph+seed*.01;return Math.round(5+E.amp*(4*Math.sin(x*.11+p)+3*Math.sin(z*.09+p*2)+2*Math.cos((x+z)*.17+p*3)+1.5*Math.sin(x*.31)*Math.cos(z*.27))+hash(x*31+z*17+e)*1.2)}
+// figures
+function mkFig(col,fill,big){const g=new THREE.Group(),m=new THREE.MeshBasicMaterial({color:fill}),l=new THREE.LineBasicMaterial({color:col});
+[[0,2.7,0,big?1.2:.9,big?1.4:.9,big?1.1:.9],[0,1.5,0,1,1.4,.6],[-.3,.4,0,.4,1,.4],[.3,.4,0,.4,1,.4]].forEach(p=>{const geo=new THREE.BoxGeometry(p[3],p[4],p[5]),b=new THREE.Mesh(geo,m);b.position.set(p[0],p[1],p[2]);const e=new THREE.LineSegments(new THREE.EdgesGeometry(geo),l);e.position.copy(b.position);g.add(b,e)});
+if(big){const em=new THREE.MeshBasicMaterial({color:0});[-.3,.3].forEach(x=>{const e=new THREE.Mesh(new THREE.BoxGeometry(.3,.15,.1),em);e.position.set(x,2.8,.62);g.add(e)})}return g}
+function mkCamp(type,col){const g=new THREE.Group();let geo,y=0;if(type=='tent'){geo=new THREE.ConeGeometry(4,5,4);y=2.5}else if(type=='dome')geo=new THREE.SphereGeometry(4,10,6,0,Math.PI*2,0,Math.PI/2);else{geo=new THREE.CylinderGeometry(1,1.7,18,6);y=9}
+const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x010805})),w=new THREE.LineSegments(new THREE.WireframeGeometry(geo),new THREE.LineBasicMaterial({color:col}));m.position.y=w.position.y=y;g.add(m,w);return g}
+const hero={x:0,z:0,y:0,lift:0,g:mkFig(0x2dff7a,0x03140a)},ch={x:0,z:0,hot:0,sp:6,g:mkFig(0xff3df2,0x1a0418)},dr={x:0,z:0,g:new THREE.Group()};
+{const b=new THREE.BoxGeometry(1.4,.5,1.4);dr.g.add(new THREE.Mesh(b,new THREE.MeshBasicMaterial({color:0x021018})),new THREE.LineSegments(new THREE.EdgesGeometry(b),new THREE.LineBasicMaterial({color:0x35e0ff})));dr.g.visible=false}
+scene.add(hero.g,ch.g,dr.g);
+const campG=new THREE.Group(),anchG=new THREE.Group();scene.add(campG,anchG);
+// water, sphere, stars, rain, beam
+const water=new THREE.Mesh(new THREE.PlaneGeometry(G*C,G*C),new THREE.MeshBasicMaterial({color:0x0a3cff,transparent:true,opacity:.22,depthWrite:false}));water.rotation.x=-Math.PI/2;water.position.set(G*C/2,0,G*C/2);scene.add(water);
+const grid=new THREE.GridHelper(G*C,32,0x35e0ff,0x0b4a6a);grid.position.set(G*C/2,0,G*C/2);grid.material.transparent=true;grid.material.opacity=.35;scene.add(grid);
+const sg=new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(280,3)),sphere=new THREE.LineSegments(sg,new THREE.LineBasicMaterial({color:0xffb02e,transparent:true,opacity:.45,fog:false}));sphere.position.set(G*C/2,0,G*C/2);scene.add(sphere);
+{const p=[];for(let i=0;i<500;i++){const a=Math.random()*6.28,b=Math.random()*1.4+.1;p.push(Math.cos(a)*Math.cos(b)*900+96,Math.sin(b)*900,Math.sin(a)*Math.cos(b)*900+96)}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));scene.add(new THREE.Points(g,new THREE.PointsMaterial({color:0xbfffd8,size:2,fog:false})))}
+const rp=new Float32Array(900*3);for(let i=0;i<900;i++){rp[i*3]=Math.random()*60-30;rp[i*3+1]=Math.random()*40;rp[i*3+2]=Math.random()*60-30}
+const rg=new THREE.BufferGeometry();rg.setAttribute('position',new THREE.BufferAttribute(rp,3));const rain=new THREE.Points(rg,new THREE.PointsMaterial({color:0x9fd8ff,size:.3}));rain.visible=false;rain.frustumCulled=false;scene.add(rain);
+const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute([0,0,0,0,80,0],3));const beam=new THREE.Line(bg,new THREE.LineBasicMaterial({color:0x35e0ff}));beam.visible=false;beam.frustumCulled=false;scene.add(beam);
+const fx=[];function ring(x,y,z,r,col){const m=new THREE.Mesh(new THREE.RingGeometry(.92,1,48),new THREE.MeshBasicMaterial({color:col,transparent:true,side:THREE.DoubleSide,depthTest:false}));m.rotation.x=-Math.PI/2;m.position.set(x,y+.4,z);scene.add(m);fx.push({m,t0:t,r})}
+// terrain
+const mk=(a,c)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(a,3));g.setAttribute('color',new THREE.Float32BufferAttribute(c,3));return g};
+function build(){const lp=[],lc=[],sp=[],sc=[],gr=Math.min(.6,S.dmg/170),tc=new THREE.Color();
+for(let z=0;z<G;z++)for(let x=0;x<G;x++){const i=z*G+x,h=HT[i],y=h*V,x0=x*C,x1=x0+C,z0=z*C,z1=z0+C;tc.set(ERAS[SRC[i]].col).multiplyScalar(.7+hash(i)*.3).lerp(GREY,gr);const r=tc.r,g=tc.g,b=tc.b;
+[[x0,z0,x1,z0],[x1,z0,x1,z1],[x1,z1,x0,z1],[x0,z1,x0,z0]].forEach(e=>{lp.push(e[0],y,e[1],e[2],y,e[3]);lc.push(r,g,b,r,g,b)});
+[[x0,z0],[x1,z0],[x1,z1],[x0,z0],[x1,z1],[x0,z1]].forEach(p=>{sp.push(p[0],y,p[1]);sc.push(r*.1,g*.1,b*.1)});
+[[1,0,x1,z0,x1,z1],[-1,0,x0,z1,x0,z0],[0,1,x1,z1,x0,z1],[0,-1,x0,z0,x1,z0]].forEach(w=>{const nx=x+w[0],nz=z+w[1],nh=(nx<0||nz<0||nx>=G||nz>=G)?0:HT[nz*G+nx];if(nh>=h)return;const y2=nh*V;
+lp.push(w[2],y,w[3],w[2],y2,w[3],w[4],y,w[5],w[4],y2,w[5]);for(let k=0;k<4;k++)lc.push(r*.6,g*.6,b*.6);
+[[w[2],y,w[3]],[w[4],y,w[5]],[w[4],y2,w[5]],[w[2],y,w[3]],[w[4],y2,w[5]],[w[2],y2,w[3]]].forEach(p=>{sp.push(p[0],p[1],p[2]);sc.push(r*.08,g*.08,b*.08)})})}
+if(tL){scene.remove(tL,tS);tL.geometry.dispose();tS.geometry.dispose()}
+tS=new THREE.Mesh(mk(sp,sc),new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1}));tL=new THREE.LineSegments(mk(lp,lc),new THREE.LineBasicMaterial({vertexColors:true}));scene.add(tS,tL)}
+function gen(){for(let z=0;z<G;z++)for(let x=0;x<G;x++){const i=z*G+x;SRC[i]=hash(i*.7+99+S.jumps*13)<S.bleed?S.prev:S.era;HT[i]=Math.max(0,Math.min(MH,eh(SRC[i],x,z)+ED[i]))}
+while(campG.children.length)campG.remove(campG.children[0]);$('labels').innerHTML='';camps=[];aliens=[];
+for(let k=0;k<10;k++){const cx=9+(k%5)*12+(hash(k*9+S.jumps)*4|0),cz=10+(k/5|0)*28+(hash(k*5+S.jumps)*8|0),s=hash(k*3.1+S.jumps*7)<S.bleed?S.prev:S.era,E=ERAS[s];
+for(let dz=-2;dz<=2;dz++)for(let dx=-2;dx<=2;dx++){const j=(cz+dz)*G+cx+dx;HT[j]=Math.min(MH,Math.max(HT[j],SEA()+1));SRC[j]=s}
+const y=HT[cz*G+cx]*V,x=cx*C+C/2,z=cz*C+C/2,st=mkCamp(E.type,E.col);st.position.set(x,y,z);campG.add(st);
+const n=2+(hash(k+5)*2|0),al=[],lb=document.createElement('div');lb.className='lb';$('labels').appendChild(lb);
+const cp={id:'C'+(k+1),x,z,y,s,type:E.type,al,seen:0,obs:0,lb};
+for(let j=0;j<n;j++){const m=MINDS[s],ox=(j-(n-1)/2)*3.4,oz=6+(j%2)*1.5,g=mkFig(s!=S.era?0x35e0ff:0xcfd8dc,0x59646b,true);g.position.set(x+ox,y,z+oz);campG.add(g);const a={x:x+ox,z:z+oz,y,g,read:0,mind:(S.bleed&&hash(k*7+j)<.2)?BLEED[j%2]:m[(k+j)%m.length]};al.push(a);aliens.push(a)}
+camps.push(cp)}
+build();water.position.y=SEA()*V+.05;grid.position.y=SEA()*V+.1}
+// log + hud
+function log(m,k){const p=document.createElement('p');p.className=k||'';p.textContent=m;const l=$('log');l.appendChild(p);l.scrollTop=l.scrollHeight;while(l.children.length>60)l.removeChild(l.firstChild)}
+const HU=[['time','TIME LEFT'],['era','ERA'],['dmg','WORLD DAMAGE'],['alert','ALERT'],['psi','PSI'],['dys','DYSON ENERGY'],['sph','SPHERE'],['sc','SCORE']];
+$('hud').innerHTML=HU.map(h=>`<div class="st"><small>${h[1]}</small><b id="h_${h[0]}"></b><i id="m_${h[0]}"></i></div>`).join('');
+function setH(k,v,p){$('h_'+k).textContent=v;const m=$('m_'+k);if(p!=null)m.style.width=Math.max(0,Math.min(100,p))+'%'}
+function zone(){return S.bpm>=105?'r':S.bpm>=90?'o':'g'}
+function hudUp(){const z=zone();$('tr').className=z=='r'?'on':'';$('to').className=z=='o'?'on':'';$('tg').className=z=='g'?'on':'';$('tb').textContent=Math.round(S.bpm)+' bpm';stage.style.borderColor={r:'#ff3b3b',o:'#ffb02e',g:'#2dff7a'}[z];const s=Math.max(0,S.left|0);setH('time',`${s/3600|0}:${String(s/60%60|0).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`,S.left/180);setH('era',S.era+(S.bleed?' ⇄ '+S.prev:''));setH('dmg',S.dmg.toFixed(0)+'%',S.dmg);setH('alert',S.alert.toFixed(0)+(S.veil>0?' veiled':''),S.alert);setH('psi',S.psi.toFixed(0),S.psi);setH('dys',S.dys.toFixed(0),S.dys);setH('sph',S.sphere+'%',S.sphere);setH('sc',S.score)}
+// tools
+const GR=[['AUTOPILOT',[['Nearest unseen camp','go:near'],['Random camp','go:rand'],['Hold position','go:stop']]],['OBSERVE',[['Binoculars scan','scan'],['Drone','drone'],['Cameras','cams'],['Microscope','mic'],['Telescope','tel']]],['MIND',[['Teleport (10 psi)','tp'],['Telekinesis (2)','tk'],['Telepathy (5)','mind']]],['WEATHER (15 psi)',[['Clear','w:clear'],['Rain','w:rain'],['Storm','w:storm'],['Fog','w:fog']]],['DYSON SPHERE',[['Magnet: pull and send (20)','mag'],['Send back (10)','back'],['Anchor (5)','anchor'],['Relay chain (30)','relay'],['Sling: far hop (15)','sling'],['Pulse: mend (30)','pulse'],['Veil: stealth (20)','veil'],['Beacon (15)','beacon'],['Build segment (25)','build']]],['HEART',[['Breathe: calm the heart','breathe']]],['TIME (40 psi + 25 dys)',[['Go to 2300','y:2300'],['Go to 2450','y:2450'],['Go to 2600','y:2600']]]];
+$('tools').innerHTML=GR.map(g=>`<div class="grp"><span>${g[0]}</span>${g[1].map(b=>`<button class="${['cams','mic','tel'].includes(b[1])?'':'act'}" data-a="${b[1]}">${b[0]}</button>`).join('')}</div>`).join('');
+document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{if(S.auto=='full'&&b.classList.contains('act'))return;act(b.dataset.a,b)});
+const need=(p,d)=>{if(S.psi<p||S.dys<(d||0)){log('Not enough '+(S.psi<p?'PSI':'Dyson energy')+'.','a');return 0}S.psi-=p;S.dys-=(d||0);return 1};
+const dH=(o,x,z)=>Math.hypot(o.x-x,o.z-z);
+function syncModes(){document.querySelectorAll('[data-a=tp],[data-a=tk],[data-a=mag]').forEach(b=>b.classList.toggle('on',b.dataset.a==S.mode));$('modeTag').textContent=S.mode?'MODE: '+S.mode.toUpperCase()+' · click the ground':''}
+function magGo(p){S.back={x:hero.x,z:hero.z};const q=p.slice(),to=q.shift();S.mag={q,t:0,fx:hero.x,fz:hero.z,to,dur:1+Math.min(1.5,dH(to,hero.x,hero.z)/120)};S.go=null;beam.visible=true;log('The Dyson sphere magnetizes you. Rising...','a')}
+function pickCamp(m){let u=camps.filter(c=>!c.obs);if(!u.length)u=camps.filter(c=>dH(c,hero.x,hero.z)>20);if(m=='rand')return u[Math.random()*u.length|0];return u.slice().sort((a,b)=>dH(a,hero.x,hero.z)-dH(b,hero.x,hero.z))[0]}
+function goTo(c){S.go={x:c.x-6,z:c.z+9};log('Autopilot walking to '+c.id+'.','c')}
+function arrived(){const cp=camps.find(c=>dH(c,hero.x,hero.z)<16);if(!cp)return;S.at=cp;if(S.auto=='semi'){if(!cp.obs)act('scan');log('Arrived at '+cp.id+' ('+cp.type+', era '+cp.s+'). Your move: read a mind, mend, veil, build, or pick the next camp.','a')}}
+function act(a,btn){if(S.over)return;
+if(a=='scan'){if(S.scanCd>t)return;const ox=S.drone?dr.x:hero.x,oz=S.drone?dr.z:hero.z,R=40+S.gain*.7*(S.drone?1.4:1);S.scanCd=t+2.5;ring(ox,gh(ox,oz),oz,R,0xffb02e);let f=0;camps.forEach(c=>{if(dH(c,ox,oz)<R){c.seen=t+8;if(!c.obs){c.obs=1;S.seen++;S.score+=50;f++;log(`Scan: ${c.id} ${c.type}, ${c.al.length} greys, era ${c.s}${c.s!=S.era?' (bleed from another time)':''}.`,'c')}}});if(!f&&S.auto=='semi')log('Scan complete. Nothing new in range.')}
+else if(a=='drone'){S.drone=!S.drone;dr.x=hero.x;dr.z=hero.z;dr.g.visible=S.drone;btn&&btn.classList.toggle('on',S.drone);log(S.drone?'Drone airborne, hunting unseen camps.':'Drone recalled.','c')}
+else if(a=='cams'){$('pa').classList.toggle('on');$('pb').classList.toggle('on');btn.classList.toggle('on')}
+else if(a=='mic'){$('micro').classList.toggle('on');btn.classList.toggle('on')}
+else if(a=='tel'){S.tel=!S.tel;btn.classList.toggle('on',S.tel)}
+else if(a=='tp'||a=='tk'||a=='mag'){S.mode=S.mode==a?null:a;if(a=='tk'&&S.mode){S.tkDir*=-1;log('Telekinesis armed: click the ground to '+(S.tkDir>0?'raise':'dig')+' a block.')}if(a=='mag'&&S.mode)log('Magnet armed: click a spot. The sphere pulls you up and sets you there (20 dys).','a');syncModes()}
+else if(a=='mind'){const n=aliens.filter(q=>dH(q,hero.x,hero.z)<28).sort((p,q)=>dH(p,hero.x,hero.z)-dH(q,hero.x,hero.z))[0];if(!need(5))return;if(!n)return log('No minds in range.');S.bub={t:t+7,m:n.mind};if(!n.read){n.read=1;S.minds++;S.score+=20}log('Mind of a grey: “'+n.mind+'”','m')}
+else if(a.startsWith('w:')){if(!need(15))return;S.w=a.slice(2);log('Weather: '+S.w+'.'+(S.w=='storm'||S.w=='fog'?' The greys see less.':''),'c')}
+else if(a.startsWith('go:')){const m=a.slice(3);if(m=='stop'){S.go=null;return log('Autopilot holding.')}const c=pickCamp(m=='rand'?'rand':'near');if(c)goTo(c)}
+else if(a=='back'){if(!S.back)return log('No previous position yet.');if(!need(0,10))return;magGo([S.back])}
+else if(a=='anchor'){if(!need(0,5))return;S.anch.push({x:hero.x,z:hero.z});if(S.anch.length>3)S.anch.shift();drawAnch();log('Anchor placed ('+S.anch.length+'/3).','c')}
+else if(a=='relay'){if(!S.anch.length)return log('Place anchors first.','a');if(!need(0,30))return;magGo(S.anch.slice())}
+else if(a=='sling'){if(!need(0,15))return;const c=camps.filter(q=>!q.obs).sort((p,q)=>dH(q,hero.x,hero.z)-dH(p,hero.x,hero.z))[0]||camps[camps.length-1];S.veil=Math.max(S.veil,8);magGo([{x:c.x-6,z:c.z+9}]);log('Sling aimed at '+c.id+'. Veiled for landing.','a')}
+else if(a=='pulse'){if(!need(0,30))return;const cx=ci(hero.x),cz=ci(hero.z);for(let z=cz-10;z<=cz+10;z++)for(let x=cx-10;x<=cx+10;x++)if(x>=0&&z>=0&&x<G&&z<G&&Math.random()<.5&&ED[z*G+x]<4)ED[z*G+x]++;gen();S.dmg=Math.max(0,S.dmg-7);S.score+=70;ring(hero.x,gh(hero.x,hero.z),hero.z,60,0xffd34d);if(S.veil<=0&&aliens.some(q=>dH(q,hero.x,hero.z)<60))S.alert+=15;log('Dyson pulse: the ground rises. Damage '+S.dmg.toFixed(0)+'%.','a')}
+else if(a=='breathe'){if(S.breath>t)return log('Still catching your breath.');S.breath=t+15;S.bpm=Math.max(58,S.bpm-18);log('Slow breath. Heart rate drops to '+Math.round(S.bpm)+' bpm.','c')}
+else if(a=='veil'){if(!need(0,20))return;S.veil=40;log('Veil on for 40s. Greys and the Chaser lose you.','a')}
+else if(a=='beacon'){if(!need(0,15))return;S.alert=Math.min(99,S.alert+25);S.score+=100;ring(hero.x,gh(hero.x,hero.z),hero.z,120,0xffd34d);log('Beacon: they will remember being seen by you.','a')}
+else if(a=='build'){if(!need(0,25))return;S.sphere=Math.min(100,S.sphere+10);S.score+=40;log('Sphere segment placed: '+S.sphere+'%.'+(S.sphere>=100?' THE SPHERE IS COMPLETE.':''),'a')}
+else if(a.startsWith('y:')){const y=+a.slice(2);if(y==S.era)return log('Already in '+y+'.');if(!need(40,25))return;const dy=Math.abs(y-S.era);S.prev=S.era;S.era=y;S.bleed=.3;S.jumps++;S.dmg=(S.dmg+ERAS[y].dmg)/2;gen();S.flash=1.2;ch.hot=60;ch.sp=6+dy/150*2;const an=Math.random()*6.28;ch.x=hero.x+Math.cos(an)*40;ch.z=hero.z+Math.sin(an)*40;S.score+=30;log(`Time jump to ${y}. Elements of ${S.prev} bled in, ${y}’s leaked back. Something followed you through.`,'m')}}
+function drawAnch(){while(anchG.children.length)anchG.remove(anchG.children[0]);S.anch.forEach(a=>{const g=new THREE.CylinderGeometry(.15,.15,6,4),m=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:0x35e0ff}));m.position.set(a.x,gh(a.x,a.z)+3,a.z);anchG.add(m)})}
+// input
+$('clk').onclick=e=>{S.ts=S.ts==1?30:1;e.target.textContent='Clock ×'+S.ts;e.target.classList.toggle('on',S.ts>1)};
+['l1','l2','l3'].forEach((id,i)=>$(id).oninput=e=>{const v=+e.target.value;if(i==0){S.tide=v;water.position.y=SEA()*V+.05;grid.position.y=SEA()*V+.1}if(i==1)S.wind=v;if(i==2)S.gain=v});
+function setAuto(m){S.auto=m;$('mSemi').classList.toggle('on',m=='semi');$('mFull').classList.toggle('on',m=='full');document.body.classList.toggle('full',m=='full');['l1','l2','l3'].forEach(i=>$(i).disabled=m=='full');if(m=='full'){S.mode=null;syncModes();log('FULL AUTO: the observer plays itself. Watch, rotate the view, open the cameras.','a')}else log('SEMI-AUTO: you pick actions, the autopilot walks.','a')}
+$('mSemi').onclick=()=>setAuto('semi');$('mFull').onclick=()=>setAuto('full');
+const ray=new THREE.Raycaster(),mv=new THREE.Vector2();let dn=null;
+$('gl').onpointerdown=e=>{dn={x:e.clientX,y:e.clientY,az:S.az,el:S.el,m:0}};
+addEventListener('pointermove',e=>{if(!dn)return;const dx=e.clientX-dn.x,dy=e.clientY-dn.y;if(Math.abs(dx)+Math.abs(dy)>6)dn.m=1;if(dn.m){S.az=dn.az-dx*.008;S.el=Math.max(.15,Math.min(1.35,dn.el+dy*.006))}});
+addEventListener('pointerup',e=>{const d=dn;dn=null;if(!d||d.m||S.auto=='full'||S.over)return;const r=ren.domElement.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;mv.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(mv,cam);const h=ray.intersectObject(tS)[0];if(!h)return;const p={x:Math.max(3,Math.min(G*C-3,h.point.x)),z:Math.max(3,Math.min(G*C-3,h.point.z))};
+if(S.mode=='mag'){if(!need(0,20))return;magGo([p]);S.mode=null;syncModes()}
+else if(S.mode=='tp'){if(!need(10))return;S.back={x:hero.x,z:hero.z};hero.x=p.x;hero.z=p.z;S.go=null;log('Teleported.','c')}
+else if(S.mode=='tk'){const i=ci(p.z)*G+ci(p.x);if(!need(2))return;ED[i]=Math.max(-8,Math.min(8,ED[i]+S.tkDir));HT[i]=Math.max(0,Math.min(MH,HT[i]+S.tkDir));build()}
+else{S.go=p;log('Autopilot walking to that spot.','c')}});
+function brain(){if(S.mag||S.over)return;const hd=dH(ch,hero.x,hero.z);if(zone()=='r'&&S.breath<=t){act('breathe');return}
+if(ch.hot>0&&hd<22){if(S.dys>=20){const c=pickCamp('rand');if(need(0,20))magGo([{x:c.x-6,z:c.z+9}])}else if(S.dys>=0&&S.veil<=0)act('veil');return}
+if(S.alert>60&&S.veil<=0&&S.dys>=20){act('veil');return}
+const at=camps.find(c=>dH(c,hero.x,hero.z)<16);
+if(at&&!S.go){if(!at.obs){act('scan');return}if(!at.al.some(a=>a.read)&&S.psi>=10){act('mind');return}if(S.dmg>30&&S.dys>=35){act('pulse');return}if(S.dys>=70&&S.sphere<100){act('build');return}if(S.psi>=80&&S.dys>=70&&camps.every(c=>c.obs)&&Math.random()<.5){act('y:'+[2300,2450,2600].filter(y=>y!=S.era)[Math.random()*2|0]);return}}
+if(!S.go){const c=pickCamp('near');if(dH(c,hero.x,hero.z)>110&&S.dys>=35){if(need(0,20))magGo([{x:c.x-6,z:c.z+9}]);return}goTo(c)}}
+// update
+function update(dt){if(S.over)return;const k=dt*S.ts;S.left-=k;S.psi=Math.min(100,S.psi+.8*k*{r:.5,o:1,g:1.3}[zone()]);S.dys=Math.min(100,S.dys+.35*k);S.dmg=Math.min(100,S.dmg+.004*k);S.veil=Math.max(0,S.veil-k);S.flash=Math.max(0,S.flash-dt);
+if(S.go&&!S.mag){const dx=S.go.x-hero.x,dz=S.go.z-hero.z,d=Math.hypot(dx,dz);if(d<2){S.go=null;arrived()}else{hero.x+=dx/d*9*dt;hero.z+=dz/d*9*dt;hero.g.rotation.y=Math.atan2(dx,dz)}}
+if(S.mag){const m=S.mag;m.t+=dt;const p=Math.min(1,m.t/m.dur),e=p*p*(3-2*p);hero.x=m.fx+(m.to.x-m.fx)*e;hero.z=m.fz+(m.to.z-m.fz)*e;hero.lift=Math.sin(p*Math.PI)*16;S.alert=Math.max(0,S.alert-30*dt);
+if(p>=1){hero.x=m.to.x;hero.z=m.to.z;if(m.q.length){m.fx=m.to.x;m.fz=m.to.z;m.to=m.q.shift();m.t=0;m.dur=1+Math.min(1.5,dH(m.to,m.fx,m.fz)/120);log('Relay hop...','c')}else{S.mag=null;hero.lift=0;beam.visible=false;ring(hero.x,gh(hero.x,hero.z),hero.z,25,0x35e0ff);log('Set down. The field releases you.','a');arrived()}}}
+hero.x=Math.max(3,Math.min(G*C-3,hero.x));hero.z=Math.max(3,Math.min(G*C-3,hero.z));
+const ty=gh(hero.x,hero.z);hero.y+=(ty-hero.y)*Math.min(1,dt*8);if(Math.abs(hero.y-ty)>20)hero.y=ty;
+const wm={clear:1,rain:.85,storm:.65,fog:.55}[S.w],R=(14+S.gain*.28)*wm*(S.veil>0?.15:1)*{r:1.4,o:1,g:.8}[zone()];let d=1e9;aliens.forEach(a=>{d=Math.min(d,dH(a,hero.x,hero.z));a.g.rotation.y=Math.atan2(hero.x-a.x,hero.z-a.z);a.g.position.y=a.y+Math.abs(Math.sin(t*2+a.x))*.15});
+if(!S.mag){if(d<R)S.alert+=(4+16*(1-d/R))*dt;else S.alert=Math.max(0,S.alert-6*dt)}
+if(S.alert>=100){S.alert=40;S.psi=Math.max(0,S.psi-30);const nr=aliens.reduce((b,a)=>dH(a,hero.x,hero.z)<dH(b,hero.x,hero.z)?a:b);const dx=hero.x-nr.x,dz=hero.z-nr.z,dd=Math.hypot(dx,dz)||1;hero.x+=dx/dd*25;hero.z+=dz/dd*25;S.go=null;S.flash=.8;log('The greys locked on to you. Their field flings you back and drains PSI.','a')}
+if(S.drone){const u=camps.find(c=>!c.obs),tx=u?u.x:hero.x,tz=u?u.z:hero.z,dd=dH({x:tx,z:tz},dr.x,dr.z);if(dd>1){dr.x+=(tx-dr.x)/dd*Math.min(24*dt,dd);dr.z+=(tz-dr.z)/dd*Math.min(24*dt,dd)}if(u&&dd<35){u.obs=1;u.seen=t+8;S.seen++;S.score+=50;log(`Drone logged ${u.id}: ${u.type}, ${u.al.length} greys.`,'c')}}
+if(ch.hot>0){ch.hot-=k;const sp=ch.sp*(S.veil>0?.3:1),dx=hero.x-ch.x,dz=hero.z-ch.z,dd=Math.hypot(dx,dz)||1;ch.x+=dx/dd*sp*dt;ch.z+=dz/dd*sp*dt;
+if(!S.mag&&dd<2.4){S.psi=Math.max(0,S.psi-25);S.dys=Math.max(0,S.dys-10);S.flash=.7;const an=Math.random()*6.28;ch.x=hero.x+Math.cos(an)*45;ch.z=hero.z+Math.sin(an)*45;log('The Chaser touched you. PSI and Dyson energy bleed away.','m')}if(ch.hot<=0)log('The Chaser dims but keeps pace behind you. You are never alone.','m')}
+else{const dx=hero.x-ch.x,dz=hero.z-ch.z,dd=Math.hypot(dx,dz)||1;if(dd>18){ch.x+=dx/dd*3*dt;ch.z+=dz/dd*3*dt}}
+if(S.w=='storm'&&Math.random()<.01)S.flash=Math.max(S.flash,.25);
+if(S.auto=='full'){S.bt-=dt;if(S.bt<=0){S.bt=2.2;brain()}}
+{const cd=dH(ch,hero.x,hero.z),tb=64+S.alert*.45+(ch.hot>0&&cd<30?28:0)+(S.mag?22:0)+S.flash*18+(S.go?6:0)+(S.w=='storm'?6:0)-(S.veil>0?12:0)-(S.mode?0:0);S.bpm+=(tb-S.bpm)*Math.min(1,dt*.7);S.bpm=Math.max(55,Math.min(170,S.bpm))}
+if(S.left<=0||S.sphere>=100&&S.dmg<20)end()}
+function end(){S.over=true;const f=S.score+Math.round((100-S.dmg)*10)+S.sphere*5+S.minds*15;$('ovt').innerHTML=`<h1>${S.left<=0?'THE WATCH ENDS':'THE WORLD ANSWERED'}</h1><p>${S.sphere>=100?'The Dyson sphere closed over a mended world.':S.dmg<45?'You mended what you could.':'The world is still wounded, but you saw it fully.'}</p><p>Camps observed: ${S.seen}/10 · Minds read: ${S.minds} · Time jumps: ${S.jumps}<br>World damage: ${S.dmg.toFixed(0)}% · Sphere: ${S.sphere}%<br><b>Final score: ${f}</b></p><button onclick="location.reload()">New world</button>`;$('over').classList.add('on')}
+// matrix glyph overlay
+const mxc=$('mx'),mx=mxc.getContext('2d'),KANA="ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿ0123456789ﾅﾆﾇﾈﾉ";let dp=[];
+function sizeAll(){SW=stage.clientWidth;SH=stage.clientHeight;ren.setSize(SW,SH);cam.aspect=SW/SH;cam.updateProjectionMatrix();mxc.width=SW;mxc.height=SH;dp=[];for(let i=0;i<SW/16;i++)dp.push({y:Math.random()*SH,v:50+Math.random()*120,l:6+Math.random()*12|0})}
+addEventListener('resize',sizeAll);
+function matrix(dt){mx.clearRect(0,0,SW,SH);mx.font='14px monospace';const col=ERAS[S.era].cs,sp=(S.w=='rain'||S.w=='storm')?2:1;dp.forEach((d,i)=>{d.y+=d.v*dt*sp;if(d.y-d.l*15>SH){d.y=0;d.v=50+Math.random()*120}for(let k=0;k<d.l;k++){mx.globalAlpha=(1-k/d.l)*.5;mx.fillStyle=k?col:'#eafff0';mx.fillText(KANA[(i*7+k+(d.y/15|0))%KANA.length],i*16,d.y-k*15)}});mx.globalAlpha=1}
+// render
+const mic=$('micro').getContext('2d'),v3=new THREE.Vector3();let fr=0;
+function pip(c,x,y,w,h){ren.setScissorTest(true);ren.setViewport(x,y,w,h);ren.setScissor(x,y,w,h);ren.clear();ren.render(scene,c);ren.setScissorTest(false)}
+function render(dt){t+=dt;
+if(!dn&&!S.over)S.az+=dt*(S.auto=='full'?.12:.03);
+const hx=hero.x,hy=hero.y+hero.lift,hz=hero.z,D=26,cp=Math.cos(S.el);
+cam.position.set(hx+Math.sin(S.az)*cp*D,hy+Math.sin(S.el)*D+4,hz+Math.cos(S.az)*cp*D);
+let tgt=new THREE.Vector3(hx,hy+3,hz),fov=60;
+if(S.tel){const c=S.at||pickCamp('near')||camps[0];tgt.set(c.x,c.y+4,c.z);fov=16}
+cam.fov+=(fov-cam.fov)*Math.min(1,dt*5);cam.updateProjectionMatrix();cam.lookAt(tgt);
+hero.g.position.set(hx,hy,hz);ch.g.position.set(ch.x,gh(ch.x,ch.z),ch.z);ch.g.rotation.y=Math.atan2(hero.x-ch.x,hero.z-ch.z);ch.g.visible=true;
+ch.g.children.forEach(o=>o.position.x+=0);if(ch.hot>0)ch.g.position.x+=(Math.random()-.5)*.4;
+dr.g.position.set(dr.x,gh(dr.x,dr.z)+14+Math.sin(t*3),dr.z);
+if(S.mag){const a=beam.geometry.attributes.position;a.setXYZ(0,hx,hy+2,hz);a.setXYZ(1,hx,hy+120,hz);a.needsUpdate=true}
+for(let i=fx.length-1;i>=0;i--){const f=fx[i],p=(t-f.t0)/1.4;if(p>=1){scene.remove(f.m);fx.splice(i,1)}else{f.m.scale.setScalar(1+f.r*p);f.m.material.opacity=1-p}}
+const n=Math.floor(sg.attributes.position.count*Math.max(S.sphere,S.era==2600||S.prev==2600&&S.bleed?55:8)/100/2)*2;sphere.geometry.setDrawRange(0,n);sphere.material.opacity=.3+.4*S.sphere/100;
+rain.visible=S.w=='rain'||S.w=='storm';if(rain.visible){const p=rg.attributes.position;for(let i=0;i<900;i++){let y=p.getY(i)-35*dt;if(y<0)y=40;p.setY(i,y);p.setX(i,p.getX(i)+S.wind*dt*4)}p.needsUpdate=true;rain.position.set(hx,gh(hx,hz)-2,hz)}
+scene.fog.density=S.w=='fog'?.03:S.w=='storm'?.014:.008;
+scene.background.setHex(S.w=='storm'&&S.flash>.2?0x2a3a30:0x010805);
+ren.setScissorTest(false);ren.setViewport(0,0,SW,SH);ren.clear();ren.render(scene,cam);
+if($('pa').classList.contains('on')){const c=pickCamp('near')||camps[0];camA.position.set(c.x+10,c.y+14,c.z+22);camA.lookAt(c.x,c.y+3,c.z);pip(camA,SW-178,8,170,110);
+if(S.drone){camB.position.set(dr.x,gh(dr.x,dr.z)+14,dr.z);camB.lookAt(dr.x+(hero.x-dr.x)*.2,gh(dr.x,dr.z),dr.z+(hero.z-dr.z)*.2+8)}else{camB.position.set(hero.x,gh(hero.x,hero.z)+70,hero.z+.1);camB.lookAt(hero.x,0,hero.z)}pip(camB,SW-178,124,170,110)}
+camps.forEach(c=>{if(c.seen>t){v3.set(c.x,c.y+(c.type=='spire'?20:8),c.z).project(cam);if(v3.z<1&&Math.abs(v3.x)<1){c.lb.style.display='block';c.lb.style.left=(v3.x+1)/2*SW+'px';c.lb.style.top=(1-v3.y)/2*SH+'px';c.lb.textContent=c.id+' · '+c.type+' · '+c.s}else c.lb.style.display='none'}else c.lb.style.display='none'});
+const b=$('bub');if(S.bub&&S.bub.t>t){b.style.display='block';b.textContent='Telepathy: “'+S.bub.m+'”'}else b.style.display='none';
+$('fl').style.opacity=Math.min(.5,S.flash/2);
+if(fr++%4==0&&$('micro').classList.contains('on')){mic.fillStyle='#010';mic.fillRect(0,0,200,150);const q=12+S.dmg/3|0;for(let i=0;i<q;i++){const bad=i%3==0&&hash(i)<S.dmg/100,x=hash(i*2.1)*190+5,y=hash(i*3.7)*140+5,r=7+hash(i)*12;mic.strokeStyle=bad?'#ff3d3d':'#2dff7a';mic.beginPath();mic.arc(x+Math.sin(t+i)*3,y+Math.cos(t+i)*3,r,0,7);mic.stroke()}mic.fillStyle='#b8ffd0';mic.font='10px monospace';mic.fillText('soil contamination '+S.dmg.toFixed(0)+'%',6,12)}
+matrix(dt);hudUp()}
+let last=performance.now();function loop(n){const dt=Math.min(.05,(n-last)/1000);last=n;update(dt);render(dt);requestAnimationFrame(loop)}
+sizeAll();gen();hero.x=camps[0].x-6;hero.z=camps[0].z+22;hero.y=gh(hero.x,hero.z);ch.x=hero.x-40;ch.z=hero.z-20;
+log('You arrive in 2300. A broken world of sea, earth and air. Pick SEMI-AUTO or FULL AUTO above.','c');log('Time jumps swap elements between eras, and something always follows you.','m');log('Heart light: GREEN under 90 bpm (calm, stealthy, faster PSI), ORANGE 90-104 (normal), RED 105+ (louder to the greys, slower PSI). Use Breathe to calm down.','a');
+requestAnimationFrame(loop);
+</script></body></html>
